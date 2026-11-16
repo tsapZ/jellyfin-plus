@@ -1,0 +1,18 @@
+{
+  "domain": "jellyfin_plus",
+  "name": "Jellyfin Plus",
+  "codeowners": [
+    "@tsapZ"
+  ],
+  "config_flow": true,
+  "documentation": "https://github.com/tsapZ/jellyfin-plus",
+  "issue_tracker": "https://github.com/tsapZ/jellyfin-plus/issues",
+  "iot_class": "local_polling",
+  "loggers": [
+    "jellyfin_apiclient_python"
+  ],
+  "requirements": [
+    "jellyfin-apiclient-python==1.11.0"
+  ],
+  "version": "2026.9.3"
+}

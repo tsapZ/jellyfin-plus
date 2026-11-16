@@ -1,0 +1,68 @@
+{
+  "title": "Jellyfin mit Spurenwahl",
+  "config": {
+    "abort": {
+      "already_configured": "Dieser Zugang ist bereits eingerichtet.",
+      "reauth_successful": "Die Anmeldung wurde erneuert."
+    },
+    "error": {
+      "cannot_connect": "Verbindung fehlgeschlagen - stimmt die Adresse?",
+      "invalid_auth": "Benutzername oder Kennwort stimmt nicht.",
+      "unknown": "Unerwarteter Fehler."
+    },
+    "step": {
+      "user": {
+        "title": "Mit Jellyfin verbinden",
+        "description": "Benutzername und Kennwort statt eines API-Schluessels: der daraus entstehende Zugang darf nur als dieser Benutzer handeln. Dadurch zeigen \"Weiterschauen\" und \"Naechste Folge\" auch wirklich deine Listen.",
+        "data": {
+          "url": "Adresse des Servers",
+          "username": "Benutzername",
+          "password": "Kennwort"
+        },
+        "data_description": {
+          "url": "Zum Beispiel https://jellyfin.example.org"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Anmeldung erneuern",
+        "description": "Das Kennwort wird erneut gebraucht.",
+        "data": {
+          "password": "Kennwort"
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "watching": {
+        "name": "Aktive Clients",
+        "unit_of_measurement": "Clients"
+      }
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "data": {
+          "audio_codec": "Tonformat",
+          "clients": "Nur diese Clients werden Spieler"
+        },
+        "data_description": {
+          "clients": "Komma-getrennt, so wie Jellyfin sie unter Geraete nennt (z. B. Jellyfin for Tizen). Leer = alle fernsteuerbaren."
+        }
+      }
+    }
+  },
+  "services": {
+    "play_media_shuffle": {
+      "name": "Zufaellig abspielen",
+      "description": "Spielt die Auswahl in zufaelliger Reihenfolge.",
+      "fields": {
+        "media": {
+          "name": "Medium",
+          "description": "Was abgespielt werden soll."
+        }
+      }
+    }
+  }
+}

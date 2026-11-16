@@ -1,0 +1,80 @@
+# Checks every week whether the generator still applies to the latest Home Assistant release.
+# Fails -> issue (a named replacement no longer matches, see AGENTS.md).
+# Applies but output changed -> branch with the regenerated files (open the PR by hand, then release).
+name: Vorlage pruefen
+
+on:
+  schedule:
+    - cron: "17 5 * * 1"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "HA version (empty = latest release)"
+        required: false
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  pruefen:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Home Assistant version
+        id: ha
+        run: |
+          v="${{ github.event.inputs.version }}"
+          [ -z "$v" ] && v=$(gh api repos/home-assistant/core/releases/latest --jq .tag_name)
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+          echo "HA $v"
+
+      - name: Regenerate
+        id: bau
+        continue-on-error: true
+        run: |
+          JFP_ZIEL=custom_components/jellyfin_plus python tools/baue_integration.py "${{ steps.ha.outputs.version }}" 2>&1 | tee bau.log
+          exit ${PIPESTATUS[0]}
+
+      - name: Issue if a replacement no longer applies
+        if: steps.bau.outcome == 'failure'
+        run: |
+          titel="Generator passt nicht zu HA ${{ steps.ha.outputs.version }}"
+          offen=$(gh issue list --state open --search "\"$titel\" in:title" --json number --jq length)
+          if [ "$offen" = "0" ]; then
+            {
+              echo "The generator stopped at Home Assistant ${{ steps.ha.outputs.version }}."
+              echo
+              echo '```'
+              tail -n 25 bau.log
+              echo '```'
+              echo
+              echo "See AGENTS.md -> *Updating to a new Home Assistant version*."
+            } > body.md
+            gh issue create --title "$titel" --body-file body.md
+          fi
+          exit 1
+
+      - name: Branch with regenerated files
+        if: steps.bau.outcome == 'success'
+        run: |
+          rm -rf custom_components/jellyfin_plus/__pycache__ bau.log
+          if git diff --quiet && [ -z "$(git status --porcelain)" ]; then
+            echo "No changes."
+            exit 0
+          fi
+          b="vorlage-${{ steps.ha.outputs.version }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -B "$b"
+          git add -A
+          git commit -m "Regenerate from Home Assistant ${{ steps.ha.outputs.version }}"
+          git push -f origin "$b"
+          echo "Pushed branch $b - review, test on a real HA, merge, release."

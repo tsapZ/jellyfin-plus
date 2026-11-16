@@ -1,0 +1,68 @@
+{
+  "title": "Jellyfin with track selection",
+  "config": {
+    "abort": {
+      "already_configured": "This account is already configured.",
+      "reauth_successful": "Re-authentication was successful."
+    },
+    "error": {
+      "cannot_connect": "Failed to connect.",
+      "invalid_auth": "Invalid authentication.",
+      "unknown": "Unexpected error."
+    },
+    "step": {
+      "user": {
+        "title": "Connect to Jellyfin",
+        "description": "Username and password rather than an API key: the resulting token may only act as this user, so Resume and Next Up show your own lists.",
+        "data": {
+          "url": "Server address",
+          "username": "Username",
+          "password": "Password"
+        },
+        "data_description": {
+          "url": "For example https://jellyfin.example.com"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Re-authenticate",
+        "description": "The password is needed again.",
+        "data": {
+          "password": "Password"
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "watching": {
+        "name": "Active clients",
+        "unit_of_measurement": "clients"
+      }
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "data": {
+          "audio_codec": "Audio codec",
+          "clients": "Only these clients become players"
+        },
+        "data_description": {
+          "clients": "Comma-separated, as Jellyfin lists them under Devices (e.g. Jellyfin for Tizen). Empty = every remote-controllable client."
+        }
+      }
+    }
+  },
+  "services": {
+    "play_media_shuffle": {
+      "name": "Play media shuffled",
+      "description": "Starts playing the selection shuffled.",
+      "fields": {
+        "media": {
+          "name": "Media",
+          "description": "The media to play."
+        }
+      }
+    }
+  }
+}
