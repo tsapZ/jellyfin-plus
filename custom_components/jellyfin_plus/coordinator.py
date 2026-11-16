@@ -88,6 +88,8 @@ class JellyfinDataUpdateCoordinator(DataUpdateCoordinator[dict[str, dict[str, An
             and session["Client"] not in EIGENE_CLIENTS
             and session.get("SupportsRemoteControl")
             and (not nur_clients or session["Client"] in nur_clients)
+            # Tools like Jellystat report sessions as the server itself
+            and session["DeviceId"] != self.server_id
         }
 
         self.device_ids = {session["DeviceId"] for session in sessions_by_id.values()}

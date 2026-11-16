@@ -1,9 +1,11 @@
 {
-  "title": "Jellyfin with track selection",
+  "title": "Jellyfin Plus",
   "config": {
     "abort": {
       "already_configured": "This account is already configured.",
-      "reauth_successful": "Re-authentication was successful."
+      "reauth_successful": "Re-authentication was successful.",
+      "reconfigure_successful": "The connection was changed.",
+      "unique_id_mismatch": "These credentials belong to a different account."
     },
     "error": {
       "cannot_connect": "Failed to connect.",
@@ -27,6 +29,14 @@
         "title": "Re-authenticate",
         "description": "The password is needed again.",
         "data": {
+          "password": "Password"
+        }
+      },
+      "reconfigure": {
+        "title": "Change connection",
+        "data": {
+          "url": "Server address",
+          "username": "Username",
           "password": "Password"
         }
       }

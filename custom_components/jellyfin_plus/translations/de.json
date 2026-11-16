@@ -1,9 +1,11 @@
 {
-  "title": "Jellyfin mit Spurenwahl",
+  "title": "Jellyfin Plus",
   "config": {
     "abort": {
       "already_configured": "Dieser Zugang ist bereits eingerichtet.",
-      "reauth_successful": "Die Anmeldung wurde erneuert."
+      "reauth_successful": "Die Anmeldung wurde erneuert.",
+      "reconfigure_successful": "Die Verbindung wurde geaendert.",
+      "unique_id_mismatch": "Diese Zugangsdaten gehoeren zu einem anderen Konto."
     },
     "error": {
       "cannot_connect": "Verbindung fehlgeschlagen - stimmt die Adresse?",
@@ -27,6 +29,14 @@
         "title": "Anmeldung erneuern",
         "description": "Das Kennwort wird erneut gebraucht.",
         "data": {
+          "password": "Kennwort"
+        }
+      },
+      "reconfigure": {
+        "title": "Verbindung aendern",
+        "data": {
+          "url": "Adresse des Servers",
+          "username": "Benutzername",
           "password": "Kennwort"
         }
       }

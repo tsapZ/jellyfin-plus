@@ -14,5 +14,5 @@
   "requirements": [
     "jellyfin-apiclient-python==1.11.0"
   ],
-  "version": "2026.9.3"
+  "version": "2026.11.1"
 }

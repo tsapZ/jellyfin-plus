@@ -18,13 +18,18 @@ from homeassistant.core import HomeAssistant
 from .client_wrapper import get_artwork_url
 from .const import (
     CONTENT_TYPE_MAP,
+    ITEM_TYPE_ARTIST,
     MEDIA_CLASS_MAP,
     MEDIA_TYPE_NONE,
+    SEARCH_ITEM_TYPE_MAP,
     SUPPORTED_COLLECTION_TYPES,
 )
 
 CONTAINER_TYPES_SPECIFIC_MEDIA_CLASS: dict[str, str] = {
+    MediaType.ALBUM: MediaClass.ALBUM,
+    MediaType.ARTIST: MediaClass.ARTIST,
     MediaType.MUSIC: MediaClass.MUSIC,
+    MediaType.PLAYLIST: MediaClass.PLAYLIST,
     MediaType.SEASON: MediaClass.SEASON,
     MediaType.TVSHOW: MediaClass.TV_SHOW,
     "boxset": MediaClass.DIRECTORY,
@@ -32,12 +37,17 @@ CONTAINER_TYPES_SPECIFIC_MEDIA_CLASS: dict[str, str] = {
     "library": MediaClass.DIRECTORY,
 }
 
+# The server expands a folder or an artist into its playable items.
 PLAYABLE_MEDIA_TYPES = [
+    MediaType.ALBUM,
+    MediaType.ARTIST,
     MediaType.EPISODE,
     MediaType.MOVIE,
     MediaType.MUSIC,
+    MediaType.PLAYLIST,
     MediaType.SEASON,
     MediaType.TVSHOW,
+    MediaType.VIDEO,
 ]
 
 
@@ -72,6 +82,8 @@ async def item_payload(
             and media_content_id
         ),
         can_expand=bool(item.get("IsFolder")),
+        # Search can scope to any folder or artist.
+        can_search=bool(item.get("IsFolder") or item["Type"] == ITEM_TYPE_ARTIST),
         children_media_class=None,
         thumbnail=thumbnail,
     )
@@ -498,6 +510,7 @@ async def build_item_response(
         title=title,
         can_play=bool(media_type in PLAYABLE_MEDIA_TYPES and media_content_id),
         can_expand=True,
+        # Only a folder has children, and search can scope to a folder.
         can_search=True,
         children=children,
         thumbnail=thumbnail,
@@ -543,8 +556,6 @@ async def search_items(
     hass: HomeAssistant, client: JellyfinClient, user_id: str, query: SearchMediaQuery
 ) -> list[BrowseMedia]:
     """Search items in Jellyfin server."""
-    search_result: list[BrowseMedia] = []
-
     items: list[dict[str, Any]] = []
 
     params: dict[str, Any] = {
@@ -563,10 +574,7 @@ async def search_items(
     )
     items.extend((ergebnis or {}).get("Items", []))
 
-    for item in items:
-        search_result.append(await item_payload(hass, client, user_id, item))
-
-    return search_result
+    return [await item_payload(hass, client, user_id, item) for item in items]
 
 
 async def get_media_info(

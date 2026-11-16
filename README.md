@@ -30,7 +30,7 @@ Do not run it next to the official Jellyfin integration with the same user – e
 
 ## Versions
 
-The integration is generated from the official one at a specific Home Assistant version (`version` in `manifest.json`). A weekly workflow regenerates it against the latest Home Assistant release and opens an issue if a modification no longer applies. Tested: Home Assistant 2026.9.3, Jellyfin 12.4.
+The integration is generated from the official one at a specific Home Assistant version (`version` in `manifest.json`). A weekly workflow regenerates it against the latest Home Assistant release and opens an issue if a modification no longer applies. Tested: Home Assistant 2026.9.3 and 2026.11.1, Jellyfin 12.4. Release `v2026.11.1` needs HA ≥ 2026.11; on older HA install `v2026.9.3`.
 
 ## For AI agents and contributors
 

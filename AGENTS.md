@@ -48,9 +48,9 @@ The comments inside the generator are German and explain *why* each change exist
 
 The weekly workflow `.github/workflows/vorlage-pruefen.yml` does step 1 against the latest HA release and opens an issue when it fails.
 
-## Known open point
+## Version history of the template
 
-- **HA 2026.11** changed `browse_media.py` (`item_payload`, search), switched `config_flow.py` from `voluptuous` to `probatio` and added reconfigure. Three replacements need adapting. Until then the release is generated from 2026.9.3.
+- **HA 2026.11** changed `browse_media.py` (`item_payload` reports `can_search`, `search_items` builds its results with `item_payload` and searches per media class), `coordinator.py` (sessions reporting as the server are dropped), switched `config_flow.py` from `voluptuous` to `probatio` and added a *reconfigure* step. The generator handles both 2026.9 and 2026.11: each affected replacement checks which form it finds (`KANN_SUCHEN_2611`, `ALT_SUCHE_2611`, `SERVER_2611`, `probatio`), and patch 4b is skipped because 2026.11 sets `can_search=True` itself. Releases: `v2026.9.3` for HA 2026.9/2026.10, `v2026.11.1` for HA ≥ 2026.11.
 
 ## Where this comes from
 

@@ -196,6 +196,15 @@ NEU_PAYLOAD = '''    title = _beschriftung(item)
         children_media_class=None,
         thumbnail=thumbnail,
     )'''
+# Ab HA 2026.11 meldet item_payload selbst can_search - dieselben zwei Zeilen
+# gehoeren dann in ALT und NEU, sonst passt das Muster nicht mehr.
+KANN_SUCHEN_2611 = '''        # Search can scope to any folder or artist.
+        can_search=bool(item.get("IsFolder") or item["Type"] == ITEM_TYPE_ARTIST),
+'''
+if KANN_SUCHEN_2611 in t:
+    _zeile = '        children_media_class=None,' + chr(10)
+    ALT_PAYLOAD = ALT_PAYLOAD.replace(_zeile, KANN_SUCHEN_2611 + _zeile)
+    NEU_PAYLOAD = NEU_PAYLOAD.replace(_zeile, KANN_SUCHEN_2611 + _zeile)
 assert ALT_PAYLOAD in t, 'item_payload nicht wie erwartet'
 t = t.replace(ALT_PAYLOAD, NEU_PAYLOAD, 1)
 
@@ -272,8 +281,59 @@ NEU_SUCHE = """    items: list[dict[str, Any]] = []
         partial(client.jellyfin.user_items, params=params)
     )
     items.extend((ergebnis or {}).get("Items", []))"""
-assert ALT_SUCHE in t, 'search_items nicht wie erwartet'
-t = t.replace(ALT_SUCHE, NEU_SUCHE, 1)
+# Ab HA 2026.11 baut der Kern die Treffer selbst mit item_payload und sucht
+# je Medienklasse; die eigene Fassung (nur Filme/Serien/Folgen, parentId)
+# ersetzt dann die ganze Suche samt Rueckgabe.
+ALT_SUCHE_2611 = """    items: list[dict[str, Any]] = []
+    # Search for items based on media filter classes (or all if none specified)
+    media_types: list[str] | list[None] = []
+    if query.media_filter_classes:
+        # Jellyfin ignores unknown item types and returns unfiltered results,
+        # so skip classes that have no Jellyfin item type. Classes can share an
+        # item type, so search each item type once.
+        media_types = list(
+            dict.fromkeys(
+                ",".join(SEARCH_ITEM_TYPE_MAP[media_class])
+                for media_class in query.media_filter_classes
+                if media_class in SEARCH_ITEM_TYPE_MAP
+            )
+        )
+    else:
+        media_types = [None]
+
+    for media_type in media_types:
+        if query.media_content_type == MediaType.ARTIST:
+            # The items of a by-name artist are not its descendants, so a
+            # parentId search finds nothing. Filter on the artist instead.
+            search = partial(
+                client.jellyfin.user_items,
+                params={
+                    "searchTerm": query.search_query,
+                    "Recursive": True,
+                    "IncludeItemTypes": media_type,
+                    "Limit": 20,
+                    "ArtistIds": query.media_content_id,
+                },
+            )
+        else:
+            search = partial(
+                client.jellyfin.search_media_items,
+                term=query.search_query,
+                media=media_type,
+                parent_id=query.media_content_id,
+            )
+        items_dict: dict[str, Any] = await hass.async_add_executor_job(search)
+        items.extend(items_dict.get("Items", []))
+
+    return [await item_payload(hass, client, user_id, item) for item in items]"""
+SUCHE_ALT_FORM = ALT_SUCHE in t
+if SUCHE_ALT_FORM:
+    t = t.replace(ALT_SUCHE, NEU_SUCHE, 1)
+elif ALT_SUCHE_2611 in t:
+    t = t.replace(ALT_SUCHE_2611, NEU_SUCHE + chr(10) + chr(10)
+                  + "    return [await item_payload(hass, client, user_id, item) for item in items]", 1)
+else:
+    raise AssertionError('search_items nicht wie erwartet')
 
 ALT_TREFFER = """    for item in items:
         content_type: str = item["MediaType"]
@@ -293,8 +353,9 @@ ALT_TREFFER = """    for item in items:
         search_result.append(response)"""
 NEU_TREFFER = """    for item in items:
         search_result.append(await item_payload(hass, client, user_id, item))"""
-assert ALT_TREFFER in t, 'Trefferschleife nicht wie erwartet'
-t = t.replace(ALT_TREFFER, NEU_TREFFER, 1)
+if SUCHE_ALT_FORM:   # ab 2026.11 macht der Kern das selbst
+    assert ALT_TREFFER in t, 'Trefferschleife nicht wie erwartet'
+    t = t.replace(ALT_TREFFER, NEU_TREFFER, 1)
 
 # 2) Spurenauswahl bauen
 SPUREN = '''
@@ -719,8 +780,10 @@ NEU_KANNSUCHEN = '''        can_play=bool(media_type in PLAYABLE_MEDIA_TYPES and
         children=children,
         thumbnail=thumbnail,
     )'''
-assert t.count(ALT_KANNSUCHEN) == 1, 'build_item_response-Ende nicht wie erwartet'
-t = t.replace(ALT_KANNSUCHEN, NEU_KANNSUCHEN, 1)
+# Ab HA 2026.11 setzt der Kern can_search=True hier selbst - dann nichts tun.
+if '        # Only a folder has children, and search can scope to a folder.' + chr(10) + '        can_search=True,' not in t:
+    assert t.count(ALT_KANNSUCHEN) == 1, 'build_item_response-Ende nicht wie erwartet'
+    t = t.replace(ALT_KANNSUCHEN, NEU_KANNSUCHEN, 1)
 
 inhalt['browse_media.py'] = t
 
@@ -749,6 +812,14 @@ NEU_SITZ = '''        # Welche Clients Spieler werden, steht in den Optionen der
             and session.get("SupportsRemoteControl")
             and (not nur_clients or session["Client"] in nur_clients)
         }'''
+# Ab HA 2026.11 filtert der Kern zusaetzlich Sitzungen, die sich als Server
+# ausgeben (Jellystat & Co.) - die Zeilen wandern in ALT und NEU mit.
+SERVER_2611 = ('            # Tools like Jellystat report sessions as the server itself' + chr(10)
+               + '            and session["DeviceId"] != self.server_id' + chr(10))
+if SERVER_2611 in t:
+    _ende = '        }'
+    ALT_SITZ = ALT_SITZ[: -len(_ende)] + SERVER_2611 + _ende
+    NEU_SITZ = NEU_SITZ[: -len(_ende)] + SERVER_2611 + _ende
 assert ALT_SITZ in t, 'Sitzungsfilter nicht wie erwartet'
 t = t.replace(ALT_SITZ, NEU_SITZ, 1)
 
@@ -788,6 +859,11 @@ NEU_OPT = '''OPTIONAL_DATA_SCHEMA = vol.Schema(
         vol.Optional("clients", default=""): str,
     }
 )'''
+# Ab HA 2026.11 heisst die Schema-Bibliothek probatio statt voluptuous (vol),
+# gleiche Schreibweise.
+if ALT_OPT not in t:
+    ALT_OPT = ALT_OPT.replace('vol.', 'probatio.')
+    NEU_OPT = NEU_OPT.replace('vol.', 'probatio.')
 assert ALT_OPT in t, 'Optionsschema nicht wie erwartet'
 t = t.replace(ALT_OPT, NEU_OPT, 1)
 inhalt['config_flow.py'] = t
@@ -1112,11 +1188,13 @@ inhalt['media_player.py'] = t
 # Texte hinterlegen.
 
 DE = {
-    "title": "Jellyfin mit Spurenwahl",
+    "title": "Jellyfin Plus",
     "config": {
         "abort": {
             "already_configured": "Dieser Zugang ist bereits eingerichtet.",
             "reauth_successful": "Die Anmeldung wurde erneuert.",
+            "reconfigure_successful": "Die Verbindung wurde geaendert.",
+            "unique_id_mismatch": "Diese Zugangsdaten gehoeren zu einem anderen Konto.",
         },
         "error": {
             "cannot_connect": "Verbindung fehlgeschlagen - stimmt die Adresse?",
@@ -1146,6 +1224,11 @@ DE = {
                 "description": "Das Kennwort wird erneut gebraucht.",
                 "data": {"password": "Kennwort"},
             },
+            "reconfigure": {
+                "title": "Verbindung aendern",
+                "data": {"url": "Adresse des Servers", "username": "Benutzername",
+                         "password": "Kennwort"},
+            },
         },
     },
     "entity": {
@@ -1171,11 +1254,13 @@ DE = {
 }
 
 EN = {
-    "title": "Jellyfin with track selection",
+    "title": "Jellyfin Plus",
     "config": {
         "abort": {
             "already_configured": "This account is already configured.",
             "reauth_successful": "Re-authentication was successful.",
+            "reconfigure_successful": "The connection was changed.",
+            "unique_id_mismatch": "These credentials belong to a different account.",
         },
         "error": {
             "cannot_connect": "Failed to connect.",
@@ -1201,6 +1286,10 @@ EN = {
                 "title": "Re-authenticate",
                 "description": "The password is needed again.",
                 "data": {"password": "Password"},
+            },
+            "reconfigure": {
+                "title": "Change connection",
+                "data": {"url": "Server address", "username": "Username", "password": "Password"},
             },
         },
     },
