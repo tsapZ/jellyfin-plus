@@ -38,13 +38,14 @@ The comments inside the generator are German and explain *why* each change exist
 | Resume at the saved position | `media_player.py`, `play_media` |
 | Own seek wins over the next poll for 15 s | `media_player.py`, `media_seek`, `_sprung_halten` |
 | Only remote-controllable sessions become players; option `clients` narrows to named clients | `coordinator.py`, `config_flow.py` |
+| Thumbnails: 360 px webp, quality 80, with image `tag` (Jellyfin then sends a one-year immutable cache header), without `api_key` | `client_wrapper.py`, `bild_url`; `browse_media.py`, `VORSCHAU_BREITE` |
 
 ## Updating to a new Home Assistant version
 
 1. Run the generator with the new version.
 2. If an assert fails: diff the official integration between the old and new version (`homeassistant/components/jellyfin/` on GitHub), adapt **ALT** (and if needed **NEU**) of that replacement. Check whether Home Assistant now does natively what the replacement did – then drop the replacement instead of fighting it (example: HA 2026.11 added `can_search` and folder-scoped search on its own).
 3. Regenerate, then test on a real Home Assistant: media browser root, a library, an episode with track choice, play, resume, search inside a library, seek.
-4. Release: tag = HA version the template came from (`v2026.9.3`), `gh release create`. HACS shows updates from releases.
+4. Release: tag = HA version the template came from (`v2026.9.3`), `gh release create`. HACS shows updates from releases. A change to the generator without a new HA version gets a fourth number (`v2026.11.1.1`).
 
 The weekly workflow `.github/workflows/vorlage-pruefen.yml` does step 1 against the latest HA release and opens an issue when it fails.
 

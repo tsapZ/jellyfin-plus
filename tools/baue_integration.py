@@ -785,7 +785,66 @@ if '        # Only a folder has children, and search can scope to a folder.' + c
     assert t.count(ALT_KANNSUCHEN) == 1, 'build_item_response-Ende nicht wie erwartet'
     t = t.replace(ALT_KANNSUCHEN, NEU_KANNSUCHEN, 1)
 
+
+# 5) Vorschaubilder klein halten. Gemessen 2026-11-16: ein Poster mit
+# MaxWidth=600&format=jpg kam mit 440 KB, "Movies" laedt davon 238 Stueck -
+# rund 100 MB, das Tablet ruckelte. 360 px webp mit quality=80 sind 35 KB.
+# 360 statt 300, weil eine Kachel im Medienbrowser am Tablet (2x-Display)
+# gut 170 CSS-Pixel breit ist.
+t = t.replace('from .client_wrapper import get_artwork_url',
+              'from .client_wrapper import VORSCHAU_BREITE, get_artwork_url', 1)
+assert 'VORSCHAU_BREITE, get_artwork_url' in t, 'Import von get_artwork_url nicht wie erwartet'
+_n = t.count('get_artwork_url(client, item, 600)') + t.count('get_artwork_url(client, item)')
+assert _n >= 2, 'Aufrufe von get_artwork_url nicht wie erwartet'
+t = t.replace('get_artwork_url(client, item, 600)', 'get_artwork_url(client, item, VORSCHAU_BREITE)')
+t = t.replace('get_artwork_url(client, item)', 'get_artwork_url(client, item, VORSCHAU_BREITE)')
+
 inhalt['browse_media.py'] = t
+
+# --------------------------------------------------------- client_wrapper --
+# Bild-Adressen: webp, quality=80, mit Bild-Tag, ohne api_key.
+# - Mit tag antwortet Jellyfin "Cache-Control: public, max-age=31536000,
+#   immutable" - der Browser holt ein Poster genau einmal. Ohne tag nur
+#   "public", also bei jedem Oeffnen neu.
+# - api_key: Bilder liefert Jellyfin ohne Anmeldung (2026-11-16 gemessen), und
+#   der Schluessel stand sonst in jeder Bildadresse im Browser und im Proxy-Log.
+t = inhalt['client_wrapper.py']
+ALT_BILD = '''    return str(client.jellyfin.artwork(artwork_id, artwork_type, max_width))'''
+NEU_BILD = '''    return bild_url(
+        str(client.jellyfin.artwork(artwork_id, artwork_type, max_width)),
+        max_width,
+        _bild_tag(item, artwork_id, artwork_type),
+    )
+
+
+# Vorschaubilder im Medienbrowser (jellyfin_plus): 360 px webp statt 600 px jpg.
+VORSCHAU_BREITE = 360
+
+
+def _bild_tag(item: dict[str, Any], artwork_id: str, artwork_type: str) -> str | None:
+    """Tag des gewaehlten Bildes - damit wird die Adresse dauerhaft cachebar."""
+    if artwork_type == "Primary":
+        if artwork_id == item.get("Id"):
+            return (item.get(ITEM_KEY_IMAGE_TAGS) or {}).get("Primary")
+        return item.get("AlbumPrimaryImageTag")
+    if artwork_id == item.get("Id"):
+        return (item.get("BackdropImageTags") or [None])[0]
+    return (item.get("ParentBackdropImageTags") or [None])[0]
+
+
+def bild_url(url: str, max_width: int, tag: str | None) -> str:
+    """Bildadresse neu aufbauen: klein, webp, mit tag, ohne api_key."""
+    teile = urlsplit(url)
+    abfrage: dict[str, Any] = {"maxWidth": max_width, "quality": 80, "format": "webp"}
+    if tag:
+        abfrage["tag"] = tag
+    return urlunsplit((teile.scheme, teile.netloc, teile.path, urlencode(abfrage), ""))'''
+assert t.count(ALT_BILD) == 1, 'get_artwork_url nicht wie erwartet'
+t = t.replace(ALT_BILD, NEU_BILD, 1)
+assert t.count('from typing import Any') == 1, 'Importe in client_wrapper nicht wie erwartet'
+t = t.replace('from typing import Any',
+              'from typing import Any' + chr(10) + 'from urllib.parse import urlencode, urlsplit, urlunsplit', 1)
+inhalt['client_wrapper.py'] = t
 
 # ------------------------------------------------------------- coordinator --
 t = inhalt['coordinator.py']

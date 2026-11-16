@@ -15,7 +15,7 @@ from homeassistant.components.media_player import (
 )
 from homeassistant.core import HomeAssistant
 
-from .client_wrapper import get_artwork_url
+from .client_wrapper import VORSCHAU_BREITE, get_artwork_url
 from .const import (
     CONTENT_TYPE_MAP,
     ITEM_TYPE_ARTIST,
@@ -60,7 +60,7 @@ async def item_payload(
     """Create response payload for a single media item."""
     title = _beschriftung(item)
 
-    thumbnail = get_artwork_url(client, item, 600)
+    thumbnail = get_artwork_url(client, item, VORSCHAU_BREITE)
 
     media_content_id = item["Id"]
     media_content_type = CONTENT_TYPE_MAP.get(item["Type"], MEDIA_TYPE_NONE)
@@ -290,7 +290,7 @@ async def build_track_response(
         raise BrowseError(f"Media not found: {item_id}")
 
     ton, unter = _spuren(item)
-    bild = get_artwork_url(client, item, 600)
+    bild = get_artwork_url(client, item, VORSCHAU_BREITE)
 
     def knoten(
         beschriftung: str, id_: str, *, abspielbar: bool = False
@@ -595,7 +595,7 @@ async def get_media_info(
         return None, None, None, None
 
     title = item["Name"]
-    thumbnail = get_artwork_url(client, item)
+    thumbnail = get_artwork_url(client, item, VORSCHAU_BREITE)
 
     if item.get("IsFolder"):
         params: dict[str, Any] = {

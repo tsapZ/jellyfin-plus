@@ -2,6 +2,7 @@
 
 import socket
 from typing import Any
+from urllib.parse import urlencode, urlsplit, urlunsplit
 
 from jellyfin_apiclient_python import Jellyfin, JellyfinClient
 from jellyfin_apiclient_python.api import API
@@ -119,7 +120,35 @@ def get_artwork_url(
     else:
         return None
 
-    return str(client.jellyfin.artwork(artwork_id, artwork_type, max_width))
+    return bild_url(
+        str(client.jellyfin.artwork(artwork_id, artwork_type, max_width)),
+        max_width,
+        _bild_tag(item, artwork_id, artwork_type),
+    )
+
+
+# Vorschaubilder im Medienbrowser (jellyfin_plus): 360 px webp statt 600 px jpg.
+VORSCHAU_BREITE = 360
+
+
+def _bild_tag(item: dict[str, Any], artwork_id: str, artwork_type: str) -> str | None:
+    """Tag des gewaehlten Bildes - damit wird die Adresse dauerhaft cachebar."""
+    if artwork_type == "Primary":
+        if artwork_id == item.get("Id"):
+            return (item.get(ITEM_KEY_IMAGE_TAGS) or {}).get("Primary")
+        return item.get("AlbumPrimaryImageTag")
+    if artwork_id == item.get("Id"):
+        return (item.get("BackdropImageTags") or [None])[0]
+    return (item.get("ParentBackdropImageTags") or [None])[0]
+
+
+def bild_url(url: str, max_width: int, tag: str | None) -> str:
+    """Bildadresse neu aufbauen: klein, webp, mit tag, ohne api_key."""
+    teile = urlsplit(url)
+    abfrage: dict[str, Any] = {"maxWidth": max_width, "quality": 80, "format": "webp"}
+    if tag:
+        abfrage["tag"] = tag
+    return urlunsplit((teile.scheme, teile.netloc, teile.path, urlencode(abfrage), ""))
 
 
 class CannotConnect(exceptions.HomeAssistantError):

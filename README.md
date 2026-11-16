@@ -15,6 +15,7 @@ A Home Assistant integration for controlling a Jellyfin player (TV, Android TV, 
 | **Libraries sorted by date added** | instead of alphabetically |
 | **Search per library** | the search field in a library only searches that library |
 | **Seeking that sticks** | your own seek wins over the next poll instead of jumping back |
+| **Light, cached thumbnails** | 360 px webp with the image tag instead of 600 px jpg: about 35 KB instead of several hundred per poster, cached by the browser for a year, no access token in image URLs |
 | **Players only for real players** | sessions that can't be remote-controlled (Seerr, API tools, Home Assistant itself) don't become media players. Optionally only selected clients become players. |
 
 ## Installation (HACS)
